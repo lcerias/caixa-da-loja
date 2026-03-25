@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caixa da Loja</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e0dfd8;
+    --text: #1a1a18;
+    --muted: #8a8a82;
+    --accent: #1a5c3a;
+    --accent-light: #e8f4ee;
+    --accent2: #c8401a;
+    --accent2-light: #fdf0ec;
+    --blue: #1a3a5c;
+    --blue-light: #e8eef4;
+    --yellow-light: #fef9e7;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+  header {
+    background: var(--accent); color: white; padding: 0 24px; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 200; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  header h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; }
+  .header-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  #auth-btn {
+    background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3);
+    padding: 6px 14px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; transition: background 0.2s;
+  }
+  #auth-btn:hover { background: rgba(255,255,255,0.25); }
+  #auth-status { opacity: 0.8; font-size: 12px; }
+
+  .container { max-width: 100%; margin: 0 auto; padding: 20px 20px; }
+
+  .month-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .month-title { font-size: 22px; font-weight: 600; }
+  .month-nav { display: flex; gap: 8px; align-items: center; }
+  .month-nav button {
+    background: var(--surface); border: 1px solid var(--border); width: 32px; height: 32px;
+    border-radius: 8px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .month-nav button:hover { background: var(--surface2); }
+  .month-nav .btn-text { width: auto; padding: 0 12px; font-size: 12px; font-weight: 600; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
+  .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+  .summary-card .label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 6px; }
+  .summary-card .value { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; }
+  .summary-card.green .value { color: var(--accent); }
+  .summary-card.red .value { color: var(--accent2); }
+  .summary-card.blue .value { color: var(--blue); }
+
+  /* ── TABELA WRAPPER ── */
+  .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .table-toolbar {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .table-toolbar h2 { font-size: 14px; font-weight: 600; }
+  .toolbar-actions { display: flex; gap: 8px; align-items: center; }
+
+  .btn { padding: 7px 14px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; border: none; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+  .table-scroll { overflow-x: auto; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+
+  /* Grupo headers */
+  thead .grupo-row th {
+    padding: 6px 8px; text-align: center; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em; border-bottom: none; white-space: nowrap;
+  }
+  th.g-fixed { background: var(--surface2); color: var(--muted); border-bottom: 1px solid var(--border); }
+  th.g-entrada { background: var(--accent-light); color: var(--accent); border-bottom: 2px solid var(--accent); }
+  th.g-saida { background: var(--accent2-light); color: var(--accent2); border-bottom: 2px solid var(--accent2); }
+  th.g-calc { background: var(--surface2); color: var(--muted); border-bottom: 1px solid var(--border); }
+
+  /* Col headers */
+  thead .col-row th {
+    padding: 6px 6px; text-align: right; font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    white-space: nowrap; position: relative;
+  }
+  thead .col-row th.th-dia { text-align: center; width: 38px; }
+  thead .col-row th.th-saldo { text-align: right; }
+  thead .col-row th.th-calc { color: var(--text); font-weight: 700; }
+
+  /* Drag handle no header das colunas dinâmicas */
+  .th-dynamic {
+    cursor: grab; user-select: none;
+  }
+  .th-dynamic.dragging { opacity: 0.4; }
+  .th-dynamic.drag-over { box-shadow: -3px 0 0 var(--accent) inset; }
+  .th-dynamic.drag-over-saida { box-shadow: -3px 0 0 var(--accent2) inset; }
+
+  .th-inner { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+  .th-inner .drag-icon { color: var(--border); font-size: 10px; cursor: grab; }
+  .th-inner .col-name { flex: 1; text-align: right; }
+  .th-inner .btn-del-col {
+    background: none; border: none; cursor: pointer; color: var(--border); font-size: 12px;
+    padding: 0 2px; line-height: 1; transition: color 0.15s; display: none;
+  }
+  th.th-dynamic:hover .btn-del-col { display: block; }
+  .th-inner .btn-del-col:hover { color: var(--accent2); }
+
+  /* Botão adicionar coluna */
+  th.th-add-col {
+    width: 32px; cursor: pointer; text-align: center;
+    transition: background 0.15s; border-left: 1px dashed var(--border);
+  }
+  th.th-add-col:hover { background: var(--accent-light); }
+  th.th-add-col.saida:hover { background: var(--accent2-light); }
+  th.th-add-col span { font-size: 16px; font-weight: 300; color: var(--muted); line-height: 1; }
+  th.th-add-col.saida span { color: var(--muted); }
+
+  /* Linhas */
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody tr.today-row { background: var(--yellow-light); }
+
+  td { padding: 5px 6px; text-align: right; vertical-align: middle; }
+  td.td-dia { text-align: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: var(--muted); width: 38px; }
+  td.td-dia.hoje { color: var(--accent); font-weight: 700; }
+
+  td input[type="number"] {
+    width: 78px; text-align: right; border: 1px solid transparent; background: transparent;
+    font-family: 'DM Mono', monospace; font-size: 12px; color: var(--blue);
+    padding: 3px 4px; border-radius: 5px; transition: all 0.15s;
+    -moz-appearance: textfield;
+  }
+  td input[type="number"]::-webkit-outer-spin-button,
+  td input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  td input[type="number"]:hover { border-color: var(--border); background: var(--surface2); }
+  td input[type="number"]:focus { border-color: var(--accent); background: var(--accent-light); outline: none; }
+
+  td.td-formula { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text); font-weight: 500; }
+  td.td-formula.pos { color: var(--accent); font-weight: 700; }
+  td.td-formula.neg { color: var(--accent2); font-weight: 700; }
+
+  tfoot tr { background: var(--text); }
+  tfoot td { padding: 9px 6px; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.9); }
+  tfoot td.tf-label { color: rgba(255,255,255,0.5); font-family: 'DM Sans', sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; text-align: center; }
+  tfoot td.tf-saldo { color: #7fff9f; }
+
+  /* ── MODAL ADICIONAR COLUNA ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 500; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: var(--radius); padding: 24px;
+    width: 340px; box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+    animation: modalIn 0.2s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes modalIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+  .modal input {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; margin-bottom: 12px;
+    transition: border-color 0.15s;
+  }
+  .modal input:focus { outline: none; border-color: var(--accent); }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-cancel { background: var(--surface2); color: var(--text); border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; }
+
+  /* ── PAINEL SAÍDAS AVULSAS ── */
+  .bottom-bar {
+    margin-top: 16px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+  }
+  .bottom-bar-header {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .bottom-bar-header h2 { font-size: 14px; font-weight: 600; }
+  .day-badge { background: var(--accent); color: white; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; font-family: 'DM Mono', monospace; }
+
+  .bottom-bar-body { padding: 14px 16px; display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+
+  .lanc-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 300px; }
+  .lanc-form input, .lanc-form select {
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; background: var(--surface); color: var(--text);
+  }
+  .lanc-form input:focus, .lanc-form select:focus { outline: none; border-color: var(--accent2); }
+  .lanc-form .inp-desc { flex: 1; min-width: 160px; }
+  .lanc-form .inp-val { width: 110px; }
+  .btn-add { background: var(--accent2); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .btn-add:hover { opacity: 0.85; }
+
+  .lanc-list { display: flex; flex-wrap: wrap; gap: 6px; flex: 2; min-width: 200px; }
+  .lanc-item {
+    display: flex; align-items: center; gap: 6px; padding: 5px 10px;
+    background: var(--accent2-light); border-radius: 8px; border-left: 3px solid var(--accent2);
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+  .lanc-item .li-desc { font-size: 12px; }
+  .lanc-item .li-cat { font-size: 10px; color: var(--muted); }
+  .lanc-item .li-val { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: var(--accent2); margin-left: 4px; }
+  .lanc-item .li-del { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 14px; line-height: 1; margin-left: 2px; }
+  .lanc-item .li-del:hover { color: var(--accent2); }
+
+  /* ── AÇÕES FLUTUANTES ── */
+  .fab-group { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 100; }
+  .fab { width: 48px; height: 48px; border-radius: 50%; border: none; cursor: pointer; font-size: 18px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+  .fab:hover { transform: scale(1.08); }
+  .fab-main { background: var(--accent); color: white; width: 52px; height: 52px; font-size: 20px; }
+  .fab-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); font-size: 16px; }
+  .fab-label { position: absolute; right: 60px; background: var(--text); color: white; font-size: 12px; padding: 4px 10px; border-radius: 6px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.15s; }
+  .fab:hover .fab-label { opacity: 1; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(60px);
+    background: var(--text); color: white; padding: 11px 20px; border-radius: 10px;
+    font-size: 13px; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    opacity: 0; transition: all 0.3s cubic-bezier(.34,1.56,.64,1); z-index: 999; white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast.success { background: var(--accent); }
+  #toast.error { background: var(--accent2); }
+
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏪 Caixa da Loja</h1>
+  <div class="header-right">
+    <span id="auth-status">Não conectado</span>
+    <button id="auth-btn" onclick="handleAuth()">Conectar Google</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Mês -->
+  <div class="month-bar">
+    <div class="month-title" id="month-title">Março 2026</div>
+    <div class="month-nav">
+      <button onclick="changeMonth(-1)">‹</button>
+      <button class="btn-text" onclick="goToday()">Hoje</button>
+      <button onclick="changeMonth(1)">›</button>
+    </div>
+  </div>
+
+  <!-- Cards resumo -->
+  <div class="summary-grid">
+    <div class="summary-card green"><div class="label">Saldo Atual</div><div class="value" id="sum-saldo">—</div></div>
+    <div class="summary-card blue"><div class="label">Total Entradas</div><div class="value" id="sum-entradas">—</div></div>
+    <div class="summary-card red"><div class="label">Total Saídas</div><div class="value" id="sum-saidas">—</div></div>
+    <div class="summary-card"><div class="label">Venda a Prazo</div><div class="value" id="sum-prazo">—</div></div>
+  </div>
+
+  <!-- Tabela -->
+  <div class="table-card">
+    <div class="table-toolbar">
+      <h2>Lançamentos do mês</h2>
+      <div class="toolbar-actions">
+        <button class="btn btn-ghost" onclick="exportarExcel()">📥 Exportar Excel</button>
+        <button class="btn btn-ghost" onclick="abrirSheets()">📊 Google Sheets</button>
+        <button class="btn btn-primary" id="btn-salvar" onclick="salvarNoSheets()">💾 Salvar</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table id="main-table">
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Saídas avulsas -->
+  <div class="bottom-bar">
+    <div class="bottom-bar-header">
+      <h2>Saídas avulsas do dia</h2>
+      <div class="day-badge" id="hoje-badge">Hoje</div>
+    </div>
+    <div class="bottom-bar-body">
+      <div class="lanc-form">
+        <input class="inp-desc" type="text" id="lanc-desc" placeholder="Descrição (Sacolas, Bobinas...)" />
+        <select id="lanc-cat"></select>
+        <input class="inp-val" type="number" id="lanc-valor" placeholder="Valor" min="0" step="0.01" />
+        <button class="btn-add" onclick="adicionarLancamento()">+ Adicionar</button>
+      </div>
+      <div class="lanc-list" id="lanc-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal nova coluna -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Nova coluna de entrada</h3>
+    <input type="text" id="modal-input" placeholder="Nome da categoria" maxlength="30" />
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarNovaColuna()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ══════════════════════════════════════
+// CONFIG GOOGLE
+// ══════════════════════════════════════
+const CLIENT_ID = '1000729587855-ir00resspre1qotjud9l1aet464v0d93.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+// ══════════════════════════════════════
+// DADOS IMPORTADOS DA PLANILHA
+// ══════════════════════════════════════
+const DADOS_IMPORTADOS = {"2":{"c":125.0,"d":150.0,"e":250.0,"f":362.0,"g":607.0,"h":800.0,"j":0.0,"k":2800.0,"l":0.0,"p":673.0},"3":{"c":0.0,"d":415.0,"e":96.0,"f":360.0,"g":441.0,"h":730.0,"j":0.0,"k":0.0,"l":0.0,"p":516.0},"4":{"c":287.0,"d":929.0,"e":301.0,"f":566.0,"g":339.0,"h":719.0,"j":0.0,"k":46.0,"l":0.0,"p":952.0},"5":{"c":1179.0,"d":575.0,"e":603.0,"f":150.0,"g":52.0,"h":729.0,"j":0.0,"k":0.0,"l":0.0,"p":612.0},"6":{"c":885.0,"d":1036.0,"e":453.0,"f":756.0,"g":307.0,"h":1192.0,"j":0.0,"k":0.0,"l":0.0,"p":1119.0},"7":{"c":197.0,"d":913.0,"e":598.0,"f":202.0,"g":39.0,"h":1333.0,"j":0.0,"k":0.0,"l":0.0,"p":1518.0},"10":{"c":402.0,"d":1213.0,"e":594.0,"f":79.0,"g":68.0,"h":850.0,"j":0.0,"k":0.0,"l":0.0,"p":890.0},"11":{"c":580.0,"d":389.0,"e":351.0,"f":75.0,"g":78.0,"h":850.0,"j":0.0,"k":0.0,"l":0.0,"p":759.0},"12":{"c":264.0,"d":185.0,"e":299.0,"f":210.0,"g":127.0,"h":633.0,"j":0.0,"k":0.0,"l":0.0,"p":545.0},"13":{"c":200.0,"d":152.0,"e":354.0,"f":87.0,"g":109.0,"h":935.0,"j":0.0,"k":243.0,"l":0.0,"p":957.0},"14":{"c":255.0,"d":4027.0,"e":690.0,"f":139.0,"g":80.0,"h":636.0,"j":0.0,"k":0.0,"l":0.0,"p":975.0},"16":{"c":149.0,"d":1007.0,"e":170.0,"f":496.0,"g":92.0,"h":306.0,"j":0,"k":0,"l":0,"p":344.0},"17":{"c":324.0,"d":225.0,"e":0,"f":419.0,"g":215.0,"h":417.0,"j":120.0,"k":0,"l":0,"p":560.0},"18":{"c":49.0,"d":324.0,"e":209.0,"f":151.0,"g":76.0,"h":438.0,"j":0,"k":388.0,"l":0,"p":755.0},"19":{"c":250.0,"d":0.0,"e":106.0,"f":141.0,"g":65.0,"h":1169.0,"j":0,"k":0,"l":0,"p":243.0},"20":{"c":42.0,"d":0,"e":0,"f":200.0,"g":46.0,"h":897.0,"j":0,"k":0,"l":0,"p":558.0},"21":{"c":573.0,"d":127.0,"e":58.0,"f":238.0,"g":127.0,"h":981.0,"j":0,"k":0,"l":0,"p":1228.0},"23":{"c":0.0,"d":52.0,"e":0.0,"f":458.0,"g":76.0,"h":723.0,"j":0.0,"k":0.0,"l":0.0,"p":345.0},"24":{"c":0,"d":0,"e":0,"f":0,"g":0,"h":0,"j":0,"k":0,"l":0,"p":0},"25":{"c":0,"d":0,"e":0,"f":0,"g":0,"h":0,"j":0,"k":0,"l":0,"p":0},"26":{"c":0,"d":0,"e":0,"f":0,"g":0,"h":0,"j":0,"k":0,"l":0,"p":0},"27":{"c":0,"d":0,"e":0,"f":0,"g":0,"h":0,"j":0,"k":0,"l":0,"p":0},"28":{"c":0,"d":0,"e":0,"f":0,"g":0,"h":0,"j":0,"k":0,"l":0,"p":0},"30":{"c":0,"d":0,"e":0,"f":0,"g":0,"h":0,"j":0,"k":0,"l":0,"p":0},"31":{"c":0,"d":0,"e":0,"f":0,"g":0,"h":0,"j":0,"k":0,"l":0,"p":0}};
+
+// Mapeamento inicial das colunas antigas para nomes legíveis
+const COLUNAS_IMPORTADAS_ENTRADA = [
+  { id: 'c', nome: 'Rec. Dinheiro' },
+  { id: 'd', nome: 'Rec. Pix/Bol' },
+  { id: 'e', nome: 'Rec. Cartão' },
+  { id: 'f', nome: 'Vda. Dinheiro' },
+  { id: 'g', nome: 'Vda. Pix/Bol' },
+  { id: 'h', nome: 'Vda. Cartão' },
+];
+const COLUNAS_IMPORTADAS_SAIDA = [
+  { id: 'j', nome: 'Compras' },
+  { id: 'k', nome: 'Saídas' },
+  { id: 'l', nome: 'Taxas' },
+];
+
+// ══════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════
+let currentDate = new Date();
+let currentYear = currentDate.getFullYear();
+let currentMonth = currentDate.getMonth();
+let todayDay = currentDate.getDate();
+
+// Colunas dinâmicas: array de { id, nome }
+let colsEntrada = [];
+let colsSaida = [];
+
+// Dados: { dia: { colId: valor, ... } }
+let dados = {};
+let lancamentos = []; // saídas avulsas do dia
+let sheetId = null;
+let accessToken = null;
+
+// Drag state
+let dragSrcId = null;
+let dragGrupo = null; // 'entrada' | 'saida'
+
+// ══════════════════════════════════════
+// UTILIDADES
+// ══════════════════════════════════════
+const brl = v => (parseFloat(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const num = v => { const f=parseFloat(v); return isNaN(f)?0:f; };
+const uid = () => 'c' + Math.random().toString(36).slice(2,8);
+
+function diasDoMes(y,m) {
+  const dias=[]; const total=new Date(y,m+1,0).getDate();
+  for(let d=1;d<=total;d++) { if(new Date(y,m,d).getDay()!==0) dias.push(d); }
+  return dias;
+}
+
+// ══════════════════════════════════════
+// RENDER CABEÇALHO
+// ══════════════════════════════════════
+function renderThead() {
+  const thead = document.getElementById('thead');
+  const ne = colsEntrada.length;
+  const ns = colsSaida.length;
+
+  // Linha 1: grupos
+  const g1 = document.createElement('tr');
+  g1.className = 'grupo-row';
+  g1.innerHTML = `
+    <th class="g-fixed" rowspan="2">DIA</th>
+    <th class="g-fixed" rowspan="2">SALDO<br>ANT.</th>
+    <th class="g-entrada" colspan="${ne+1}">ENTRADAS</th>
+    <th class="g-calc" rowspan="2">TOTAL<br>ENTROU</th>
+    <th class="g-saida" colspan="${ns+1}">SAÍDAS</th>
+    <th class="g-calc" rowspan="2">TOTAL<br>SAIU</th>
+    <th class="g-calc" rowspan="2">SALDO<br>DO DIA</th>
+    <th class="g-fixed" rowspan="2">VDA<br>PRAZO</th>
+  `;
+  thead.innerHTML = '';
+  thead.appendChild(g1);
+
+  // Linha 2: colunas
+  const g2 = document.createElement('tr');
+  g2.className = 'col-row';
+
+  // Entradas dinâmicas
+  colsEntrada.forEach(col => {
+    const th = document.createElement('th');
+    th.className = 'th-dynamic';
+    th.dataset.id = col.id;
+    th.dataset.grupo = 'entrada';
+    th.draggable = true;
+    th.innerHTML = `<div class="th-inner">
+      <span class="drag-icon">⠿</span>
+      <span class="col-name">${col.nome}</span>
+      <button class="btn-del-col" onclick="deletarColuna('${col.id}','entrada')" title="Remover coluna">×</button>
+    </div>`;
+    adicionarDragHandlers(th);
+    g2.appendChild(th);
+  });
+
+  // + entrada
+  const thAddE = document.createElement('th');
+  thAddE.className = 'th-add-col';
+  thAddE.title = 'Adicionar categoria de entrada';
+  thAddE.innerHTML = '<span>+</span>';
+  thAddE.onclick = () => abrirModal('entrada');
+  g2.appendChild(thAddE);
+
+  // (total entrou já está no rowspan do grupo)
+
+  // Saídas dinâmicas
+  colsSaida.forEach(col => {
+    const th = document.createElement('th');
+    th.className = 'th-dynamic';
+    th.dataset.id = col.id;
+    th.dataset.grupo = 'saida';
+    th.draggable = true;
+    th.innerHTML = `<div class="th-inner">
+      <span class="drag-icon">⠿</span>
+      <span class="col-name">${col.nome}</span>
+      <button class="btn-del-col" onclick="deletarColuna('${col.id}','saida')" title="Remover coluna">×</button>
+    </div>`;
+    adicionarDragHandlers(th);
+    g2.appendChild(th);
+  });
+
+  // + saída
+  const thAddS = document.createElement('th');
+  thAddS.className = 'th-add-col saida';
+  thAddS.title = 'Adicionar categoria de saída';
+  thAddS.innerHTML = '<span>+</span>';
+  thAddS.onclick = () => abrirModal('saida');
+  g2.appendChild(thAddS);
+
+  thead.appendChild(g2);
+}
+
+// ══════════════════════════════════════
+// RENDER CORPO
+// ══════════════════════════════════════
+function renderTbody() {
+  const tbody = document.getElementById('tbody');
+  const tfoot = document.getElementById('tfoot');
+  const dias = diasDoMes(currentYear, currentMonth);
+
+  let saldoAnt = 0;
+  const totE = {}, totS = {};
+  colsEntrada.forEach(c => totE[c.id]=0);
+  colsSaida.forEach(c => totS[c.id]=0);
+  let totTotalEntrou=0, totTotalSaiu=0, totPrazo=0;
+
+  tbody.innerHTML = '';
+
+  dias.forEach(dia => {
+    const d = dados[dia] || {};
+    const isToday = dia===todayDay && currentMonth===currentDate.getMonth() && currentYear===currentDate.getFullYear();
+    const tr = document.createElement('tr');
+    if(isToday) tr.className='today-row';
+
+    // Dia
+    const tdDia = document.createElement('td');
+    tdDia.className = 'td-dia' + (isToday?' hoje':'');
+    tdDia.textContent = dia + (isToday?' ●':'');
+    tr.appendChild(tdDia);
+
+    // Saldo anterior
+    const tdSaldo = document.createElement('td');
+    tdSaldo.className = 'td-formula';
+    tdSaldo.textContent = brl(saldoAnt);
+    tr.appendChild(tdSaldo);
+
+    // Entradas
+    let somaEntrada = saldoAnt;
+    colsEntrada.forEach(col => {
+      const td = document.createElement('td');
+      const val = num(d[col.id]);
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.value = val||''; inp.placeholder='0';
+      inp.onchange = e => { setDado(dia, col.id, e.target.value); };
+      inp.onkeydown = e => { if(e.key==='Enter') e.target.blur(); };
+      td.appendChild(inp);
+      tr.appendChild(td);
+      somaEntrada += val;
+      totE[col.id] += val;
+    });
+
+    // + entrada (célula vazia para alinhar)
+    tr.appendChild(document.createElement('td'));
+
+    // Total entrou
+    const tdTE = document.createElement('td');
+    tdTE.className = 'td-formula';
+    tdTE.textContent = brl(somaEntrada);
+    tr.appendChild(tdTE);
+    totTotalEntrou += (somaEntrada - saldoAnt);
+
+    // Saídas
+    let somaSaida = 0;
+    colsSaida.forEach(col => {
+      const td = document.createElement('td');
+      let val = num(d[col.id]);
+
+      // Somar lançamentos avulsos de hoje
+      if(isToday) {
+        lancamentos.forEach(l => { if(l.colId===col.id) val += l.valor; });
+      }
+
+      const inp = document.createElement('input');
+      inp.type='number'; inp.value=val||''; inp.placeholder='0';
+      inp.onchange = e => { setDado(dia, col.id, e.target.value); };
+      inp.onkeydown = e => { if(e.key==='Enter') e.target.blur(); };
+      td.appendChild(inp);
+      tr.appendChild(td);
+      somaSaida += val;
+      totS[col.id] += val;
+    });
+
+    // + saída (célula vazia)
+    tr.appendChild(document.createElement('td'));
+
+    // Total saiu
+    const tdTS = document.createElement('td');
+    tdTS.className = 'td-formula';
+    tdTS.textContent = brl(somaSaida);
+    tr.appendChild(tdTS);
+    totTotalSaiu += somaSaida;
+
+    // Saldo do dia
+    const saldoDia = somaEntrada - somaSaida;
+    const tdSD = document.createElement('td');
+    tdSD.className = 'td-formula ' + (saldoDia<0?'neg':'pos');
+    tdSD.textContent = brl(saldoDia);
+    tr.appendChild(tdSD);
+
+    // Prazo
+    const prazoVal = num(d['_prazo']);
+    const tdP = document.createElement('td');
+    const inpP = document.createElement('input');
+    inpP.type='number'; inpP.value=prazoVal||''; inpP.placeholder='0';
+    inpP.onchange = e => { setDado(dia,'_prazo',e.target.value); };
+    tdP.appendChild(inpP);
+    tr.appendChild(tdP);
+    totPrazo += prazoVal;
+
+    tbody.appendChild(tr);
+    saldoAnt = saldoDia;
+  });
+
+  // Rodapé totais
+  tfoot.innerHTML = '';
+  const tfr = document.createElement('tr');
+
+  const addTF = (txt, cls='') => {
+    const td = document.createElement('td');
+    td.textContent = txt;
+    if(cls) td.className = cls;
+    tfr.appendChild(td);
+  };
+
+  addTF('TOTAL', 'tf-label');
+  addTF(''); // saldo ant
+  colsEntrada.forEach(col => addTF(brl(totE[col.id])));
+  addTF(''); // +col
+  addTF(brl(totTotalEntrou));
+  colsSaida.forEach(col => addTF(brl(totS[col.id])));
+  addTF(''); // +col
+  addTF(brl(totTotalSaiu));
+  addTF(brl(saldoAnt), 'tf-saldo');
+  addTF(brl(totPrazo));
+  tfoot.appendChild(tfr);
+
+  // Cards resumo
+  document.getElementById('sum-saldo').textContent = brl(saldoAnt);
+  document.getElementById('sum-entradas').textContent = brl(totTotalEntrou);
+  document.getElementById('sum-saidas').textContent = brl(totTotalSaiu);
+  document.getElementById('sum-prazo').textContent = brl(totPrazo);
+
+  // Badge hoje
+  document.getElementById('hoje-badge').textContent = `Dia ${todayDay}/${currentMonth+1}`;
+  document.getElementById('month-title').textContent = `${MESES[currentMonth]} ${currentYear}`;
+
+  // Select lançamentos
+  atualizarSelectLancamentos();
+}
+
+function render() {
+  renderThead();
+  renderTbody();
+}
+
+// ══════════════════════════════════════
+// DADOS
+// ══════════════════════════════════════
+function setDado(dia, colId, val) {
+  if(!dados[dia]) dados[dia]={};
+  dados[dia][colId] = parseFloat(val)||0;
+  salvarLocal();
+  renderTbody();
+}
+
+// ══════════════════════════════════════
+// DRAG & DROP COLUNAS
+// ══════════════════════════════════════
+function adicionarDragHandlers(th) {
+  th.addEventListener('dragstart', e => {
+    dragSrcId = th.dataset.id;
+    dragGrupo = th.dataset.grupo;
+    th.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  th.addEventListener('dragend', () => {
+    th.classList.remove('dragging');
+    document.querySelectorAll('.th-dynamic').forEach(t => t.classList.remove('drag-over','drag-over-saida'));
+  });
+  th.addEventListener('dragover', e => {
+    e.preventDefault();
+    if(th.dataset.grupo !== dragGrupo) return;
+    document.querySelectorAll('.th-dynamic').forEach(t => t.classList.remove('drag-over','drag-over-saida'));
+    th.classList.add(dragGrupo==='entrada'?'drag-over':'drag-over-saida');
+  });
+  th.addEventListener('drop', e => {
+    e.preventDefault();
+    if(th.dataset.id === dragSrcId || th.dataset.grupo !== dragGrupo) return;
+    const arr = dragGrupo==='entrada' ? colsEntrada : colsSaida;
+    const fromIdx = arr.findIndex(c=>c.id===dragSrcId);
+    const toIdx = arr.findIndex(c=>c.id===th.dataset.id);
+    if(fromIdx<0||toIdx<0) return;
+    const [moved] = arr.splice(fromIdx,1);
+    arr.splice(toIdx,0,moved);
+    salvarLocal();
+    render();
+  });
+}
+
+// ══════════════════════════════════════
+// MODAL NOVA COLUNA
+// ══════════════════════════════════════
+let modalGrupo = null;
+function abrirModal(grupo) {
+  modalGrupo = grupo;
+  document.getElementById('modal-title').textContent = grupo==='entrada' ? 'Nova coluna de entrada' : 'Nova coluna de saída';
+  document.getElementById('modal-input').value = '';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('modal-input').focus(),100);
+}
+function fecharModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+document.getElementById('modal-input').addEventListener('keydown', e => { if(e.key==='Enter') confirmarNovaColuna(); if(e.key==='Escape') fecharModal(); });
+document.getElementById('modal-overlay').addEventListener('click', e => { if(e.target===document.getElementById('modal-overlay')) fecharModal(); });
+
+function confirmarNovaColuna() {
+  const nome = document.getElementById('modal-input').value.trim();
+  if(!nome) return;
+  const novaCol = { id: uid(), nome };
+  if(modalGrupo==='entrada') colsEntrada.push(novaCol);
+  else colsSaida.push(novaCol);
+  fecharModal();
+  salvarLocal();
+  render();
+  toast(`Coluna "${nome}" adicionada!`, 'success');
+}
+
+function deletarColuna(id, grupo) {
+  const arr = grupo==='entrada' ? colsEntrada : colsSaida;
+  const col = arr.find(c=>c.id===id);
+  if(!col) return;
+  if(!confirm(`Remover coluna "${col.nome}"? Os valores lançados nela serão perdidos.`)) return;
+  if(grupo==='entrada') colsEntrada = colsEntrada.filter(c=>c.id!==id);
+  else colsSaida = colsSaida.filter(c=>c.id!==id);
+  // Limpar dados dessa coluna
+  Object.values(dados).forEach(d => delete d[id]);
+  salvarLocal();
+  render();
+  toast(`Coluna removida`, '');
+}
+
+// ══════════════════════════════════════
+// LANÇAMENTOS AVULSOS
+// ══════════════════════════════════════
+function atualizarSelectLancamentos() {
+  const sel = document.getElementById('lanc-cat');
+  const val = sel.value;
+  sel.innerHTML = colsSaida.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+  if(val && colsSaida.find(c=>c.id===val)) sel.value = val;
+}
+
+function adicionarLancamento() {
+  const desc = document.getElementById('lanc-desc').value.trim();
+  const colId = document.getElementById('lanc-cat').value;
+  const valor = parseFloat(document.getElementById('lanc-valor').value);
+  if(!desc||!colId||!valor||valor<=0) { toast('Preencha descrição e valor','error'); return; }
+  const colNome = colsSaida.find(c=>c.id===colId)?.nome || '';
+  lancamentos.push({ id: Date.now(), desc, colId, colNome, valor });
+  document.getElementById('lanc-desc').value='';
+  document.getElementById('lanc-valor').value='';
+  salvarLocal();
+  renderLancamentos();
+  renderTbody();
+  toast('Saída adicionada!','success');
+}
+
+function removerLancamento(id) {
+  lancamentos = lancamentos.filter(l=>l.id!==id);
+  salvarLocal();
+  renderLancamentos();
+  renderTbody();
+}
+
+function renderLancamentos() {
+  const list = document.getElementById('lanc-list');
+  if(!lancamentos.length) { list.innerHTML='<span style="color:var(--muted);font-size:12px;">Nenhuma saída avulsa hoje</span>'; return; }
+  list.innerHTML = lancamentos.map(l=>`
+    <div class="lanc-item">
+      <span class="li-desc">${l.desc}</span>
+      <span class="li-cat">${l.colNome}</span>
+      <span class="li-val">${brl(l.valor)}</span>
+      <button class="li-del" onclick="removerLancamento(${l.id})">×</button>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════
+// PERSISTÊNCIA LOCAL
+// ══════════════════════════════════════
+function chave() { return `caixa_v3_${currentYear}_${currentMonth+1}`; }
+function chaveConfig() { return `caixa_v3_config`; }
+
+function salvarLocal() {
+  localStorage.setItem(chave(), JSON.stringify({ dados, lancamentos, sheetId }));
+  localStorage.setItem(chaveConfig(), JSON.stringify({ colsEntrada, colsSaida }));
+}
+
+function carregarLocal() {
+  // Config de colunas (global, independe do mês)
+  const rawConfig = localStorage.getItem(chaveConfig());
+  if(rawConfig) {
+    const cfg = JSON.parse(rawConfig);
+    colsEntrada = cfg.colsEntrada || [...COLUNAS_IMPORTADAS_ENTRADA];
+    colsSaida = cfg.colsSaida || [...COLUNAS_IMPORTADAS_SAIDA];
+  } else {
+    colsEntrada = JSON.parse(JSON.stringify(COLUNAS_IMPORTADAS_ENTRADA));
+    colsSaida = JSON.parse(JSON.stringify(COLUNAS_IMPORTADAS_SAIDA));
+  }
+
+  // Dados do mês
+  const raw = localStorage.getItem(chave());
+  if(raw) {
+    const p = JSON.parse(raw);
+    dados = p.dados || {};
+    lancamentos = (p.lancamentos||[]);
+    sheetId = p.sheetId || null;
+  } else {
+    dados = {};
+    lancamentos = [];
+    sheetId = null;
+
+    // Se for março 2026, importar dados da planilha
+    if(currentMonth===2 && currentYear===2026) {
+      // Mapear as colunas antigas (c,d,e...) para os IDs das colunas atuais
+      const mapa = {};
+      COLUNAS_IMPORTADAS_ENTRADA.forEach((col,i) => { mapa[col.id] = colsEntrada[i]?.id; });
+      COLUNAS_IMPORTADAS_SAIDA.forEach((col,i) => { mapa[col.id] = colsSaida[i]?.id; });
+
+      Object.entries(DADOS_IMPORTADOS).forEach(([dia, vals]) => {
+        dados[dia] = {};
+        Object.entries(vals).forEach(([oldId, val]) => {
+          if(oldId==='p') { dados[dia]['_prazo']=val; return; }
+          const newId = mapa[oldId];
+          if(newId) dados[dia][newId] = val;
+        });
+      });
+      salvarLocal();
+    }
+  }
+}
+
+// ══════════════════════════════════════
+// NAVEGAÇÃO
+// ══════════════════════════════════════
+function changeMonth(dir) {
+  currentMonth+=dir;
+  if(currentMonth>11){currentMonth=0;currentYear++;}
+  if(currentMonth<0){currentMonth=11;currentYear--;}
+  carregarLocal();
+  render();
+  renderLancamentos();
+}
+function goToday() {
+  currentMonth=currentDate.getMonth();
+  currentYear=currentDate.getFullYear();
+  carregarLocal();
+  render();
+  renderLancamentos();
+}
+
+// ══════════════════════════════════════
+// GOOGLE AUTH
+// ══════════════════════════════════════
+async function handleAuth() {
+  if(accessToken) {
+    accessToken=null;
+    document.getElementById('auth-status').textContent='Não conectado';
+    document.getElementById('auth-btn').textContent='Conectar Google';
+    return;
+  }
+  if(!window.google) {
+    const s1=document.createElement('script'); s1.src='https://apis.google.com/js/api.js';
+    s1.onload=()=>gapi.load('client',async()=>{ await gapi.client.init({discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']}); });
+    document.head.appendChild(s1);
+    const s2=document.createElement('script'); s2.src='https://accounts.google.com/gsi/client';
+    document.head.appendChild(s2);
+    await new Promise(r=>setTimeout(r,1500));
+  }
+  const tc = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPES,
+    callback: resp => {
+      if(resp.error){ toast('Erro: '+resp.error,'error'); return; }
+      accessToken=resp.access_token;
+      gapi.client.setToken({access_token:accessToken});
+      document.getElementById('auth-status').textContent='✓ Conectado';
+      document.getElementById('auth-btn').textContent='Desconectar';
+      toast('Conectado!','success');
+    }
+  });
+  tc.requestAccessToken();
+}
+
+// ══════════════════════════════════════
+// SALVAR NO SHEETS
+// ══════════════════════════════════════
+async function salvarNoSheets() {
+  if(!accessToken){ toast('Conecte ao Google primeiro','error'); return; }
+  const btn=document.getElementById('btn-salvar');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Salvando...';
+  try {
+    if(!sheetId) await criarPlanilha();
+    await escreverDados();
+    salvarLocal(); renderTbody();
+    toast('Salvo no Google Sheets!','success');
+  } catch(e){ toast('Erro: '+e.message,'error'); }
+  finally { btn.disabled=false; btn.innerHTML='💾 Salvar'; }
+}
+
+async function criarPlanilha() {
+  const titulo=`Caixa ${MESES[currentMonth]} ${currentYear}`;
+  const resp=await fetch('https://sheets.googleapis.com/v4/spreadsheets',{
+    method:'POST', headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
+    body:JSON.stringify({properties:{title:titulo},sheets:[{properties:{title:titulo}}]})
+  });
+  const data=await resp.json();
+  if(!resp.ok) throw new Error(data.error?.message||'Erro ao criar');
+  sheetId=data.spreadsheetId;
+}
+
+async function escreverDados() {
+  const titulo=`Caixa ${MESES[currentMonth]} ${currentYear}`;
+  const dias=diasDoMes(currentYear,currentMonth);
+  const headers=[
+    'DATA','SALDO ANT.',
+    ...colsEntrada.map(c=>c.nome),'TOTAL ENTROU',
+    ...colsSaida.map(c=>c.nome),'TOTAL SAIU',
+    'SALDO DO DIA','','VENDA PRAZO'
+  ];
+  const rows=[headers];
+  let saldoAnt=0;
+  dias.forEach(dia=>{
+    const d=dados[dia]||{};
+    const entVals=colsEntrada.map(col=>num(d[col.id]));
+    const saiVals=colsSaida.map(col=>{
+      let v=num(d[col.id]);
+      if(dia===todayDay&&currentMonth===currentDate.getMonth()&&currentYear===currentDate.getFullYear())
+        lancamentos.forEach(l=>{ if(l.colId===col.id) v+=l.valor; });
+      return v;
+    });
+    const totalEnt=saldoAnt+entVals.reduce((a,b)=>a+b,0);
+    const totalSai=saiVals.reduce((a,b)=>a+b,0);
+    const saldo=totalEnt-totalSai;
+    rows.push([dia,saldoAnt,...entVals,totalEnt,...saiVals,totalSai,saldo,'',num(d['_prazo'])]);
+    saldoAnt=saldo;
+  });
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(titulo)}!A1?valueInputOption=RAW`,{
+    method:'PUT', headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
+    body:JSON.stringify({values:rows})
+  });
+}
+
+// ══════════════════════════════════════
+// EXPORTAR EXCEL
+// ══════════════════════════════════════
+function exportarExcel() {
+  const titulo = `Caixa ${MESES[currentMonth]} ${currentYear}`;
+  const dias = diasDoMes(currentYear, currentMonth);
+  const ne = colsEntrada.length;
+  const ns = colsSaida.length;
+
+  // Mapeamento de colunas Excel
+  // A=DATA, B=SALDO ANT, C..C+ne-1=entradas, C+ne=TOTAL ENTROU,
+  // C+ne+1..C+ne+ns=saidas, C+ne+ns+1=TOTAL SAIU, C+ne+ns+2=SALDO DIA, +1=vazio, +2=PRAZO
+  const colB  = 1; // 0-based
+  const colCstart = 2;
+  const colTotalEntrou = colCstart + ne;
+  const colSstart = colTotalEntrou + 1;
+  const colTotalSaiu = colSstart + ns;
+  const colSaldoDia  = colTotalSaiu + 1;
+  const colPrazo     = colSaldoDia + 2;
+  const totalCols    = colPrazo + 1;
+
+  const wb = XLSX.utils.book_new();
+  const ws = {};
+
+  // ── Estilos via cell metadata ──────────────────────────────
+  const COR_HEADER_DARK  = 'FF1F3864'; // azul escuro
+  const COR_HEADER_MID   = 'FF2E75B6'; // azul médio
+  const COR_TOTAL_BG     = 'FFE2EFDA'; // verde claro totais
+  const FMT_BRL = '#,##0.00;\\(#,##0.00\\);\\-';
+
+  function col26(n) { // 0-based → letra(s)
+    let s=''; n++;
+    while(n>0){ s=String.fromCharCode(65+(n-1)%26)+s; n=Math.floor((n-1)/26); }
+    return s;
+  }
+  function addr(r,c) { return col26(c)+(r+1); } // 0-based r,c
+
+  function setCell(ws, r, c, value, opts={}) {
+    const a = addr(r,c);
+    ws[a] = { v: value, t: typeof value==='number'?'n': value&&value[0]==='='?'f':'s' };
+    if(value&&typeof value==='string'&&value[0]==='=') { ws[a].t='n'; ws[a].f=value.slice(1); ws[a].v=0; }
+    if(opts.s) ws[a].s = opts.s;
+    if(opts.fmt) ws[a].z = opts.fmt;
+  }
+
+  // Estilo helper
+  function sty({bgColor,fontColor='FFFFFFFF',bold=false,align='right',border=true,sz=10}={}) {
+    const s = {
+      font:{ name:'Arial', sz, bold, color:{rgb:fontColor} },
+      alignment:{ horizontal:align, vertical:'center', wrapText:false },
+    };
+    if(bgColor) s.fill = { patternType:'solid', fgColor:{rgb:bgColor} };
+    if(border) s.border = {
+      top:{style:'thin',color:{rgb:'FFBFBFBF'}}, bottom:{style:'thin',color:{rgb:'FFBFBFBF'}},
+      left:{style:'thin',color:{rgb:'FFBFBFBF'}}, right:{style:'thin',color:{rgb:'FFBFBFBF'}},
+    };
+    return s;
+  }
+
+  // ── Linha 1: título mesclado ──────────────────────────────
+  setCell(ws, 0, 0, 'CAIXA — '+titulo.toUpperCase(), {
+    s: sty({bgColor:COR_HEADER_DARK, bold:true, align:'center', sz:13})
+  });
+  // Preencher células mescladas com estilo (necessário para XLSX.js)
+  for(let c=1;c<colPrazo;c++) {
+    ws[addr(0,c)] = { v:'', t:'s', s: sty({bgColor:COR_HEADER_DARK}) };
+  }
+
+  // ── Linha 2: grupos ───────────────────────────────────────
+  const grupos = [
+    [colB, colB, 'SALDO'],
+    [colCstart, colTotalEntrou, 'ENTRADAS'],
+    [colSstart, colTotalSaiu, 'SAÍDAS'],
+    [colPrazo, colPrazo, 'CONTROLE'],
+  ];
+  for(let c=0;c<totalCols;c++) {
+    ws[addr(1,c)] = { v:'', t:'s', s: sty({bgColor:COR_HEADER_MID, bold:true, align:'center'}) };
+  }
+  grupos.forEach(([cs,ce,nome]) => {
+    setCell(ws, 1, cs, nome, { s: sty({bgColor:COR_HEADER_MID, bold:true, align:'center'}) });
+  });
+
+  // ── Linha 3: cabeçalhos das colunas ──────────────────────
+  const sCab = sty({bgColor:COR_HEADER_DARK, bold:true, align:'center', sz:9});
+  const cabecalhos = [
+    [0,'DATA'],[colB,'SALDO ANT.'],
+    ...colsEntrada.map((c,i)=>[colCstart+i, c.nome]),
+    [colTotalEntrou,'TOTAL ENTROU'],
+    ...colsSaida.map((c,i)=>[colSstart+i, c.nome]),
+    [colTotalSaiu,'TOTAL SAIU'],
+    [colSaldoDia,'SALDO DO DIA'],
+    [colPrazo,'VENDA PRAZO'],
+  ];
+  for(let c=0;c<totalCols;c++) ws[addr(2,c)] = {v:'',t:'s',s:sCab};
+  cabecalhos.forEach(([c,nome]) => setCell(ws, 2, c, nome, {s:sCab}));
+
+  // ── Linhas de dados ───────────────────────────────────────
+  const sInput   = sty({fontColor:'FF0000FF', bgColor:null, bold:false, align:'right'});
+  const sFormula = sty({fontColor:'FF000000', bgColor:null, bold:true, align:'right'});
+  const sFormulaNB = sty({fontColor:'FF000000', bgColor:null, bold:false, align:'right'});
+  const sDia     = sty({fontColor:'FFCCCCCC', bgColor:null, bold:false, align:'center'});
+  const sTot     = sty({bgColor:COR_TOTAL_BG, fontColor:'FF000000', bold:true, align:'right'});
+  const sTotLabel= sty({bgColor:COR_TOTAL_BG, fontColor:'FF000000', bold:true, align:'center'});
+
+  let dataRow = 3; // linha 4 (0-based=3)
+
+  dias.forEach((dia, idx) => {
+    const d = dados[dia] || {};
+    const r = dataRow + idx;
+    const excelRow = r + 1; // 1-based para fórmulas
+
+    // DATA
+    ws[addr(r,0)] = {v:dia, t:'n', s:sDia, z:'0'};
+
+    // SALDO ANT: primeiro dia = 0, demais = saldo do dia anterior
+    if(idx===0) {
+      ws[addr(r,colB)] = {v:0, t:'n', s:{...sInput}, z:FMT_BRL};
+      ws[addr(r,colB)].s = sty({fontColor:'FF0000FF', bgColor:null, bold:false, align:'right'});
+    } else {
+      const prevRow = r; // r já é o índice atual; linha anterior é excelRow-1
+      ws[addr(r,colB)] = {v:0, t:'n', f:`${col26(colSaldoDia)}${excelRow-1}`, s:sFormulaNB, z:FMT_BRL};
+    }
+
+    // Entradas (input azul)
+    colsEntrada.forEach((col,i) => {
+      const v = num(d[col.id]);
+      ws[addr(r, colCstart+i)] = {v, t:'n', s:sInput, z:FMT_BRL};
+    });
+
+    // Total entrou (fórmula preta bold)
+    const colBl = col26(colB); const colLastEnt = col26(colCstart+ne-1);
+    ws[addr(r,colTotalEntrou)] = {v:0, t:'n', f:`SUM(${colBl}${excelRow}:${colLastEnt}${excelRow})`, s:sFormula, z:FMT_BRL};
+
+    // Saídas (input azul)
+    colsSaida.forEach((col,i) => {
+      const v = num(d[col.id]);
+      ws[addr(r, colSstart+i)] = {v, t:'n', s:sInput, z:FMT_BRL};
+    });
+
+    // Total saiu
+    const colFirstSai = col26(colSstart); const colLastSai = col26(colSstart+ns-1);
+    ws[addr(r,colTotalSaiu)] = {v:0, t:'n', f:`SUM(${colFirstSai}${excelRow}:${colLastSai}${excelRow})`, s:sFormulaNB, z:FMT_BRL};
+
+    // Saldo do dia
+    const cTE = col26(colTotalEntrou); const cTS = col26(colTotalSaiu);
+    ws[addr(r,colSaldoDia)] = {v:0, t:'n', f:`${cTE}${excelRow}-${cTS}${excelRow}`, s:sFormula, z:FMT_BRL};
+
+    // Prazo
+    const v = num(d['_prazo']);
+    ws[addr(r,colPrazo)] = {v, t:'n', s:sInput, z:FMT_BRL};
+  });
+
+  // ── Linha de totais ───────────────────────────────────────
+  const totRow = dataRow + dias.length;
+  const totExcel = totRow + 1;
+  const firstDataExcel = dataRow + 1;
+
+  ws[addr(totRow,0)] = {v:'TOTAL', t:'s', s:sTotLabel};
+
+  // Totais de cada coluna de input
+  colsEntrada.forEach((col,i) => {
+    const cl = col26(colCstart+i);
+    ws[addr(totRow,colCstart+i)] = {v:0, t:'n', f:`SUM(${cl}${firstDataExcel}:${cl}${totExcel-1})`, s:sTot, z:FMT_BRL};
+  });
+  colsSaida.forEach((col,i) => {
+    const cl = col26(colSstart+i);
+    ws[addr(totRow,colSstart+i)] = {v:0, t:'n', f:`SUM(${cl}${firstDataExcel}:${cl}${totExcel-1})`, s:sTot, z:FMT_BRL};
+  });
+
+  // Total entrou (soma das entradas, sem saldo anterior)
+  const colsCentrada = colsEntrada.map((_,i)=>col26(colCstart+i));
+  ws[addr(totRow,colTotalEntrou)] = {v:0, t:'n', f:`SUM(${colsCentrada.join(totExcel+',')}${totExcel})`, s:sTot, z:FMT_BRL};
+
+  // Saldo final = saldo do último dia
+  ws[addr(totRow,colSaldoDia)] = {v:0, t:'n', f:`${col26(colSaldoDia)}${totExcel-1}`, s:{...sTot, font:{...sTot.font, color:{rgb:'FF1A5C3A'}}}, z:FMT_BRL};
+
+  // Prazo total
+  const cp = col26(colPrazo);
+  ws[addr(totRow,colPrazo)] = {v:0, t:'n', f:`SUM(${cp}${firstDataExcel}:${cp}${totExcel-1})`, s:sTot, z:FMT_BRL};
+
+  // ── Merges ────────────────────────────────────────────────
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:colPrazo-1}},   // título
+    {s:{r:1,c:colB}, e:{r:1,c:colB}},        // SALDO
+    {s:{r:1,c:colCstart}, e:{r:1,c:colTotalEntrou}}, // ENTRADAS
+    {s:{r:1,c:colSstart}, e:{r:1,c:colTotalSaiu}},   // SAÍDAS
+    {s:{r:1,c:colPrazo}, e:{r:1,c:colPrazo}}, // CONTROLE
+  ];
+
+  // ── Larguras das colunas ──────────────────────────────────
+  const colWidths = [{wch:7},{wch:13}];
+  colsEntrada.forEach(()=>colWidths.push({wch:13}));
+  colWidths.push({wch:14}); // total entrou
+  colsSaida.forEach(()=>colWidths.push({wch:13}));
+  colWidths.push({wch:14},{wch:14},{wch:2},{wch:14}); // total saiu, saldo, vazio, prazo
+  ws['!cols'] = colWidths;
+
+  // ── Alturas das linhas ────────────────────────────────────
+  const rowHeights = [{hpt:28},{hpt:16},{hpt:30}];
+  dias.forEach(()=>rowHeights.push({hpt:15}));
+  rowHeights.push({hpt:20});
+  ws['!rows'] = rowHeights;
+
+  // ── Range ─────────────────────────────────────────────────
+  ws['!ref'] = `A1:${col26(colPrazo)}${totRow+1}`;
+
+  XLSX.utils.book_append_sheet(wb, ws, titulo);
+  XLSX.writeFile(wb, `${titulo.replace(/ /g,'_')}.xlsx`);
+  toast('Excel exportado!', 'success');
+}
+
+function abrirSheets() {
+  if(!sheetId){ toast('Salve no Google Sheets primeiro','error'); return; }
+  window.open('https://docs.google.com/spreadsheets/d/'+sheetId,'_blank');
+}
+
+// ══════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════
+let toastTimer;
+function toast(msg,tipo='') {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='show '+(tipo||'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.className='',3000);
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+carregarLocal();
+render();
+renderLancamentos();
+</script>
+</body>
+</html>
